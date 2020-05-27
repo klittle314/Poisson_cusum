@@ -6,14 +6,15 @@ output:
   pdf_document: default
   word_document: default
   html_document: default
+classoption:  landscape
 ---
 
 ## Introduction to CUSUM control chart based on Poisson counts
-The Shewhart control chart based on Poisson counts is the c-chart. The center line $\overline{c}$ is the average of the observed event counts; the upper control limit is $\overline{c} + 3\sqrt\overline{c}$.
+The Shewhart control chart based on Poisson counts is the c-chart. The center line $\overline{c}$ is the average of the observed event counts; the upper control limit is $\overline{c} + 3\sqrt{\overline{c}}$.
 
 The c-chart is an all-purpose tool that can detect a range of special (assignable) causes. A CUSUM chart for Poisson counts is designed to detect one kind of special cause: relatively small shifts in mean level. Relative to the c-chart, a CUSUM chart will identify small shifts in the Poisson mean more quickly.  The increased sensitivity comes at a cost of greater complexity in design and interpretation. 
 
-Lucas in "Counted Data CUSUM's", *Technometrics*, **27**(2), 129-144 outlined the motivation and computations for cumulative sum control charts for count data. He described charts for Poisson counts and for time betweeen Poisson events.
+Lucas in "Counted Data CUSUM's", *Technometrics*, May 1985, **27**(2), 129-144 outlined the motivation and computations for cumulative sum control charts for count data. He described charts for Poisson counts and for time betweeen Poisson events.
 
 Lucas applied the CUSUM technique to a ten-year series of industrial accidents recorded monthly.  His summary comment applies to our work in monitoring and responding to series related to Covid-19:
 
@@ -33,23 +34,29 @@ If we believe that a sequence of independent Poisson events is a reasonable appr
 The first two parameters are Poisson means: $\mu_{1}$ is the mean of the Poisson variable during a baseline period and $\mu_{2}$ the mean of the Poisson variable in a subsequent period. Remember that the CUSUM chart is designed to quickly detect the shift from $\mu_{1}$ to $\mu_{2}$.
 
 The reference value $k$ is a function of the means.  The formula is derived from the Sequential Probability Ratio Test to compare two Poisson means:
-$$k = (\mu_{2} - \mu_{1})/ln(\mu_{2}/\mu_{1})$$.
+$$k = (\mu_{2} - \mu_{1})/ln(\mu_{2}/\mu_{1})$$
 If $Y_{i}$ is the i-th variable in a Poisson series, the CUSUM statistic is defined as a recursion:
-$$S_{i} = max(0,Y_{i} - k + S_{i-1})$$.
-Lucas presents options for the starting value $S_{0}$.  We will use $S_{0} = 0$.
+$$S_{i} = max(0,Y_{i} - k + S_{i-1})$$
+Lucas presents options for the starting value $S_{0}$.  We will use $S_{0} = 0$.   The CUSUM chart plots the CUSUM statistic versus the index i, which typically represents a time or date.
+
+The CUSUM chart's third parameter is $h$. The CUSUM chart signals a special cause when $S_{i} \ge h$.
+
+$h$ determines the run length i for a specific sequence; the run length is defined as the first index value i such that $S_{i} \ge h$.  
 
 Lucas shows a series of tables that enable a user to choose a chart design, based on the Average Run Length.  The aim: choose a design with long ARL for mean level $\mu_{1}$ and short ARL for mean level $\mu_{2}$.
 
-Computing the ARL requires a third parameter, $h$. $h$ determines the run length i for a specific sequence; the run length is defined as the first index value i such that $S_{i} \ge h$. 
-
 In the simulations below, we use $\mu_{1} = 1$ and $\mu_{2} = 2$.  These choices determine $k = 1.443$, approximately.
+
+```{r, results='asis', eval=(opts_knit$get('rmarkdown.pandoc.to') == 'latex'), echo=FALSE}
+cat('\\pagebreak')
+```
 ### Reproducing Table 1 Entries in Lucas (1985)
 Lucas generated estimates of average run length using a Markov chain method (Brook, D., and Evans, D. A. (1972), “An Approach to the Probability Distribution of CUSUM Run Lengths,” *Biometrika*,
 **59**, 539-549).  For integer values of k, this method can give exact results.
 
-We can estimate average run lengths by simulating nrep repetitions of a Poisson sequence of length n, calculating the CUSUM statistic for different k values and comparing to the entries in Lucas's Table 1.  We explored simulation for three reasons:  (1) to understand the structure of the CUSUM chart; (2) to estimate ARL values for non-integer values of k; (3) to provide a test case for more general distributional assumptions than Poisson events.
+You can estimate average run lengths by simulating nrep repetitions of a Poisson sequence of length n, calculating the CUSUM statistic for different k values and comparing to the entries in Lucas's Table 1.  I explored simulation for three reasons:  (1) to understand the structure of the CUSUM chart; (2) to estimate ARL values for non-integer values of k; (3) to provide a test case for more general distributional assumptions than Poisson events.
 
-Over the range of values studied, the ARLs typically agreed to two significant digits for the shifted mean.  It takes a several minutes to generate the ARLs for the null case; as h increases, I needed to increase the length of the Poisson series to find at least one CUSUM statistic to equal or exceed $h$.  Agreement between simulated values and tabled values for the null case was not as good as for shifted case.   The simulation gives a sense of the variation in the run length distributions.
+Over the range of values studied, the ARLs typically agreed to two significant digits for the shifted mean.  It takes several minutes to generate the ARLs for the null case; as h increases, I needed to increase the length of the Poisson series to find at least one CUSUM statistic to equal or exceed $h$.  Agreement between simulated values and tabled values for the null case was not as good as for shifted case.   The simulation gives a sense of the variation in the run length distributions.
 
 For illustration, consider the value $k = 1$ and the $h\in (2,3,5,7,10)$. 
 
@@ -66,12 +73,18 @@ summary_table1 <- make_table_RL(h_vals_use = hvals_use,
                                 Po_mean_use= 1)
 
 #htmlTable(summary_table1, rnames=FALSE, caption = "5000 random values from Po(1), repeated 500 times; k = 1.0.  Column 'Mean as a Multiple of k' = 1.0")
-toc()
+toc1 <- toc(quiet = TRUE)
 
 kable(summary_table1,row.names = FALSE,
-      caption = "5000 random values from Po(1), repeated 500 times; k = 1.0.  Column 'Mean as a Multiple of k' = 1.0")
+      caption = "5000 random values from Po(1), repeated 500 times; k = 1.0.  Compare to column 'Mean as a Multiple of k' = 1.0")
 
-tic("shifted mean ARLtable")
+```
+
+Elapsed time to create Table 1:  `r toc1$toc - toc1$tic` seconds.
+
+```{r Table_2, echo=FALSE}
+tic()
+
 summary_table2 <- make_table_RL(h_vals_use = hvals_use,
                                 n_use      = 200,
                                 nrep_use   = 1000,
@@ -79,8 +92,86 @@ summary_table2 <- make_table_RL(h_vals_use = hvals_use,
                                 Po_mean_use= 2)
 
 # htmlTable(summary_table2,rnames=FALSE, caption = "200 random values from Po(2), repeated 1000 times; k = 1.0.  Column 'Mean as a Multiple of k' = 2.0")
-toc()
+toc2 <- toc(quiet = TRUE)
 
 kable(summary_table2,row.names = FALSE,
-      caption = "200 random values from Po(2), repeated 1000 times; k = 1.0.  Column 'Mean as a Multiple of k' = 2.0")
+      caption = "200 random values from Po(2), repeated 1000 times; k = 1.0.  Compare to column 'Mean as a Multiple of k' = 2.0")
+
 ```
+
+Elapsed time to create Table 2:  `r toc2$toc - toc2$tic` seconds.
+
+
+### Sample plots:  25 sequences for Po(1) and Po(2), in c-chart and CUSUM format
+Here are four charts that illustrate the sensitivity of CUSUM chart to doubling in mean from 1 to 2.   We use the SPRT value of k, approximately 1.443.  Using simulation to make a table of ARLs, I chose a value of h = 4, corresponding to a CUSUM ARL of 116 days for Poisson events with mean 1 and CUSUM ARL of 7.5 days for Poisson events with mean 2.   
+
+```{r SamplePlots1-1, echo = FALSE, fig.height=6, fig.width=8}
+set.seed(1234)
+mu1 <- 1
+mu2 <- 2
+
+k_test <- (mu2 - mu1)/log(mu2/mu1)
+
+df_out1 <- make_series(n=50,nrep=25,k_test=k_test,Po_mean=1, N_day=7)
+
+p_Poisson1 <- ggplot(data=df_out1$df1,aes(x=i_index,y=Poisson_values))+
+  theme_bw()+
+  geom_point(size=rel(1))+
+  #geom_line(colour="grey")+
+  facet_wrap(~j_index)+
+  geom_hline(yintercept = 1.0)+
+  geom_hline(yintercept = 4, linetype = "dashed") +
+  geom_vline(xintercept = 7, linetype = "dashed") +
+  labs(title = "Example of 25 Po(1) sequences; center line = 1 and UCL = 4 from Po(1)",
+       subtitle = "Vertical line: 7 days; coincidence that 4 is the control limit in both charts!")
+
+p_Poisson1 
+
+```
+
+```{r SamplePlots1-2, echo = FALSE,fig.height=6, fig.width=8}
+p_cusum1 <- ggplot(data=df_out1$df1,aes(x=i_index,y=cusum))+
+  theme_bw()+
+  geom_point(size=rel(1))+
+  facet_wrap(~j_index)+
+  geom_vline(xintercept = 7.0, linetype = "dashed")+
+  geom_hline(yintercept = 4.0, linetype = "dashed")+
+  labs(title = "Example of 25 Po(1) sequences with k = 1.443, SPRT value; reference is Po(1)",
+       subtitle = "Cusum limit: 4; vertical line: 7 days")
+
+p_cusum1
+
+```
+
+
+```{r SamplePlots2-1, echo = FALSE, fig.height=6, fig.width=8}
+df_out2 <- make_series(n=50,nrep=25,k_test=k_test,Po_mean=2, N_day=7)
+
+p_Poisson2 <- ggplot(data=df_out2$df1,aes(x=i_index,y=Poisson_values))+
+                theme_bw()+
+                geom_point(size=rel(1))+
+                #geom_line(colour="grey")+
+                facet_wrap(~j_index)+
+                geom_hline(yintercept = 1.0)+
+                geom_hline(yintercept = 4, linetype = "dashed") +
+                geom_vline(xintercept = 7, linetype = "dashed")+
+                labs(title = "Example of 25 Po(2) sequences; center line = 1 and UCL = 4 from Po(1)",
+                     subtitle = "Vertical line: 7 days; coincidence that 4 is the control limit in both charts!")
+
+p_Poisson2 
+
+```
+
+```{r, SamplePlots2-2, echo = FALSE,fig.height=6, fig.width=8} 
+p_cusum2 <- ggplot(data=df_out2$df1,aes(x=i_index,y=cusum))+
+            theme_bw()+
+            geom_point(size=rel(.6))+
+            facet_wrap(~j_index)+
+            geom_vline(xintercept = 7.0, linetype = "dashed")+
+            geom_hline(yintercept = 4.0, linetype = "dashed")+
+            labs(title = "Example of 25 Po(2) sequences with k = 1.443, SPRT value; reference is Po(1)",
+                 subtitle = "Cusum limit: 4; vertical line: 7 days")
+
+p_cusum2
+```
+
